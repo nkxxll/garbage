@@ -1,27 +1,49 @@
 const std = @import("std");
-const garbage = @import("garbage");
+const llisp = @import("llisp");
 
 pub fn main() !void {
-    // Prints to stderr, ignoring potential errors.
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-    try garbage.bufferedPrint();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len < 2) {
+        std.debug.print("Usage: llisp <file>\n", .{});
+        std.process.exit(1);
+    }
+
+    const raw = try std.fs.cwd().readFileAlloc(allocator, args[1], 1024 * 1024);
+    defer allocator.free(raw);
+    const source: [:0]const u8 = try allocator.dupeZ(u8, raw);
+    defer allocator.free(source);
+
+    var p = llisp.parser.Parser.init(allocator, source);
+    _ = try p.parseRoot();
+    defer p.ast.deinit();
+
+    var nogc = llisp.gc.NoGc.init(allocator);
+    defer nogc.deinit();
+
+    var interp = try llisp.interpreter.Interpreter.init(nogc.gcAllocator(), &p.ast, allocator);
+    defer interp.deinit();
+
+    const root_node = p.ast.nodes.items[p.ast.root];
+    const root_items = p.ast.listSlice(root_node.data.list);
+
+    for (root_items) |node_id| {
+        const v = try interp.astToValue(node_id);
+        _ = try interp.eval(v, null);
+    }
+
+    if (interp.output.items.len > 0) {
+        const len = interp.output.items.len;
+        const written = try std.posix.write(std.posix.STDOUT_FILENO, interp.output.items[0..len]);
+        _ = written;
+    }
 }
 
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
-    };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+test {
+    std.testing.refAllDecls(llisp);
 }

@@ -1,0 +1,13 @@
+(define mylist (list 1 2 3))
+(display (car mylist))
+(newline)
+(display (car (cdr mylist)))
+(newline)
+(display (car (cdr (cdr mylist))))
+(newline)
+
+(define pair (cons 10 20))
+(display (car pair))
+(newline)
+(display (cdr pair))
+(newline)

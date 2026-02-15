@@ -1,0 +1,12 @@
+(define (make-adder n)
+  (lambda (x) (+ n x)))
+
+(define add5 (make-adder 5))
+(define add10 (make-adder 10))
+
+(display (add5 3))
+(newline)
+(display (add10 3))
+(newline)
+(display (add5 (add10 1)))
+(newline)
