@@ -4,6 +4,7 @@ const Value = val.Value;
 const ValueTag = val.ValueTag;
 const ConsCell = val.ConsCell;
 const Closure = val.Closure;
+const Allocator = std.mem.Allocator;
 
 /// Fat-pointer GC interface, modeled after std.mem.Allocator.
 /// Backends implement the VTable; the interpreter calls typed wrappers
@@ -85,6 +86,29 @@ pub const GcAllocator = struct {
         if (T == []Value) return .vector;
         @compileError("unsupported GC type: " ++ @typeName(T));
     }
+};
+
+const MarkAndSweepGPABacked = struct {
+    gpa: Allocator,
+    roots: std.ArrayList(Header),
+
+    const Header = struct {
+        // todo dont know what I need here exactly
+        val: Value,
+        size: usize,
+    };
+    // todo alloc
+    // todo free (is a real free with the gpa
+    // garbage collect after a certain number of allocation calls
+    fn init(gpa: Allocator) MarkAndSweepGPABacked {
+        // make gpa
+        return MarkAndSweepGPABacked{
+            .gpa = gpa,
+            .roots = std.ArrayList(Header).initCapacity(gpa, 16),
+        };
+    }
+
+    // return interface
 };
 
 /// Trivial non-collecting backend. Arena-backed pools, never reclaims.
