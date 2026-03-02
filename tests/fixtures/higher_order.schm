@@ -1,0 +1,29 @@
+;; map: apply fn to every element
+(define (map fn lst)
+  (if (null? lst)
+      (list)
+      (cons (fn (car lst)) (map fn (cdr lst)))))
+
+(define (square x) (* x x))
+(define (double x) (* x 2))
+
+(display (map square (list 1 2 3 4 5)))
+(newline)
+(display (map double (list 10 20 30)))
+(newline)
+
+;; filter: keep elements where pred returns true
+(define (filter pred lst)
+  (if (null? lst)
+      (list)
+      (if (pred (car lst))
+          (cons (car lst) (filter pred (cdr lst)))
+          (filter pred (cdr lst)))))
+
+(define (gt3 x) (> x 3))
+(display (filter gt3 (list 1 2 3 4 5 6)))
+(newline)
+
+;; compose map and filter
+(display (map square (filter gt3 (list 1 2 3 4 5 6))))
+(newline)

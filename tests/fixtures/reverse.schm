@@ -1,0 +1,14 @@
+;; List reversal (tail-recursive)
+(define (rev-iter remaining acc)
+  (if (null? remaining)
+      acc
+      (rev-iter (cdr remaining) (cons (car remaining) acc))))
+
+(define (reverse lst) (rev-iter lst (list)))
+
+(display (reverse (list 1 2 3 4 5)))
+(newline)
+(display (reverse (list)))
+(newline)
+(display (reverse (list 42)))
+(newline)

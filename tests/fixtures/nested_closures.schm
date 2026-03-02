@@ -1,0 +1,21 @@
+;; Curried arithmetic: triple nesting
+(define (curry-add a)
+  (lambda (b)
+    (lambda (c)
+      (+ a (+ b c)))))
+
+(display (((curry-add 1) 2) 3))
+(newline)
+(display (((curry-add 10) 20) 30))
+(newline)
+
+;; Closure pair: adder and subtractor
+(define (make-adder-pair n)
+  (cons (lambda (x) (+ x n))
+        (lambda (x) (- x n))))
+
+(define pair (make-adder-pair 5))
+(display ((car pair) 10))
+(newline)
+(display ((cdr pair) 10))
+(newline)

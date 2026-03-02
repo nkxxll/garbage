@@ -1,0 +1,26 @@
+;; Stateful accumulator via closures and mutation
+(define (make-accumulator init)
+  (define total init)
+  (lambda (n)
+    (set! total (+ total n))
+    total))
+
+(define acc (make-accumulator 0))
+(display (acc 5))
+(newline)
+(display (acc 10))
+(newline)
+(display (acc 25))
+(newline)
+
+;; Two independent accumulators
+(define a (make-accumulator 100))
+(define b (make-accumulator 0))
+(display (a 1))
+(newline)
+(display (b 1))
+(newline)
+(display (a 1))
+(newline)
+(display (b 50))
+(newline)

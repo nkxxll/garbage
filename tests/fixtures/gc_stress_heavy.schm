@@ -1,0 +1,62 @@
+;; Heavy stress test: massive allocation churn to find GC vs NoGC break-even.
+;; NoGC retains all dead objects; mark-sweep should eventually win on memory.
+
+;; Sum a list
+(define (sum lst)
+  (if (null? lst) 0 (+ (car lst) (sum (cdr lst)))))
+
+;; Build a list of n ones
+(define (ones n)
+  (if (= n 0) (list) (cons 1 (ones (- n 1)))))
+
+;; Allocate and discard temporary lists in a loop.
+;; Each iteration creates a 200-element list (200 cons + 200 numbers)
+;; then immediately discards it — pure garbage.
+(define (churn n)
+  (if (= n 0)
+      0
+      (begin
+        (sum (ones 200))
+        (churn (- n 1)))))
+
+;; 500 iterations × 400 allocations = ~200k total allocations, mostly garbage.
+(churn 500)
+
+;; Verify heap is still consistent.
+(display (sum (ones 10)))
+(newline)
+
+;; Closure churn: create and discard many closures.
+(define (closure-churn n)
+  (if (= n 0)
+      0
+      (begin
+        (define f (lambda (x) (+ x n)))
+        (f n)
+        (closure-churn (- n 1)))))
+
+(closure-churn 500)
+
+;; Nested list-of-lists churn: deeper object graphs.
+(define (make-pairs n)
+  (if (= n 0)
+      (list)
+      (cons (cons n (cons (+ n 1) (list)))
+            (make-pairs (- n 1)))))
+
+(define (count-pairs lst)
+  (if (null? lst) 0 (+ 1 (count-pairs (cdr lst)))))
+
+;; 100 iterations, each builds a 100-pair structure then discards it.
+(define (pair-churn n)
+  (if (= n 0)
+      0
+      (begin
+        (count-pairs (make-pairs 100))
+        (pair-churn (- n 1)))))
+
+(pair-churn 100)
+
+;; Final sanity check
+(display (sum (ones 5)))
+(newline)

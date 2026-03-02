@@ -1,0 +1,14 @@
+;; Mutual recursion: is-even / is-odd
+(define (is-even n) (if (= n 0) #t (is-odd (- n 1))))
+(define (is-odd n) (if (= n 0) #f (is-even (- n 1))))
+
+(display (is-even 0))
+(newline)
+(display (is-even 10))
+(newline)
+(display (is-odd 7))
+(newline)
+(display (is-even 3))
+(newline)
+(display (is-odd 0))
+(newline)

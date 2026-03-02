@@ -1,0 +1,27 @@
+;; String display and list-of-strings
+(display "hello world")
+(newline)
+
+(define greeting "hi there")
+(display greeting)
+(newline)
+
+;; Strings in data structures
+(define names (list "alice" "bob" "carol"))
+(display (car names))
+(newline)
+(display (car (cdr names)))
+(newline)
+(display (car (cdr (cdr names))))
+(newline)
+
+;; Dotted pair with strings
+(define kv (cons "key" "value"))
+(display kv)
+(newline)
+
+;; String equality
+(display (eq? "foo" "foo"))
+(newline)
+(display (eq? "foo" "bar"))
+(newline)

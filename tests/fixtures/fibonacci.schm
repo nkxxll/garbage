@@ -1,0 +1,29 @@
+;; Iterative fibonacci using mutation
+(define (fib n)
+  (if (< n 2)
+      n
+      (begin
+        (define a 0)
+        (define b 1)
+        (define i 2)
+        (define (loop)
+          (if (> i n)
+              b
+              (begin
+                (define tmp (+ a b))
+                (set! a b)
+                (set! b tmp)
+                (set! i (+ i 1))
+                (loop))))
+        (loop))))
+
+(display (fib 0))
+(newline)
+(display (fib 1))
+(newline)
+(display (fib 5))
+(newline)
+(display (fib 10))
+(newline)
+(display (fib 20))
+(newline)

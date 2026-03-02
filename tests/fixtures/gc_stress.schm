@@ -1,0 +1,35 @@
+;; Stress test: create lots of garbage to exercise the collector.
+
+;; Sum a list
+(define (sum lst)
+  (if (null? lst) 0 (+ (car lst) (sum (cdr lst)))))
+
+;; Build a list of n ones
+(define (ones n)
+  (if (= n 0) (list) (cons 1 (ones (- n 1)))))
+
+;; Allocate and discard temporary lists
+(define (churn n)
+  (if (= n 0)
+      0
+      (begin
+        (sum (ones 50))
+        (churn (- n 1)))))
+
+(churn 20)
+
+;; Verify the heap is still consistent after heavy allocation
+(display (sum (ones 10)))
+(newline)
+
+;; Closure churn: make and discard closures
+(define (make-closure-chain n)
+  (if (= n 0)
+      (lambda (x) x)
+      (begin
+        (define f (lambda (x) (+ x n)))
+        (make-closure-chain (- n 1)))))
+
+(define id (make-closure-chain 30))
+(display (id 99))
+(newline)

@@ -1,0 +1,25 @@
+;; fold-left: reduce a list
+(define (foldl op acc lst)
+  (if (null? lst)
+      acc
+      (foldl op (op acc (car lst)) (cdr lst))))
+
+;; sum
+(define (add a b) (+ a b))
+(display (foldl add 0 (list 1 2 3 4 5)))
+(newline)
+
+;; product
+(define (mul a b) (* a b))
+(display (foldl mul 1 (list 1 2 3 4 5)))
+(newline)
+
+;; sum of squares via foldl + inline lambda
+(define (add-sq acc x) (+ acc (* x x)))
+(display (foldl add-sq 0 (list 1 2 3 4)))
+(newline)
+
+;; count elements via foldl
+(define (inc-count acc x) (+ acc 1))
+(display (foldl inc-count 0 (list 10 20 30 40 50)))
+(newline)
