@@ -1,23 +1,21 @@
 const std = @import("std");
 
 pub const SymbolTable = struct {
-    chars: std.ArrayList(u8),
-    spans: std.ArrayList(Span),
+    names: std.ArrayList([]const u8),
     lookup: std.StringHashMapUnmanaged(u24),
-
-    pub const Span = struct { start: u32, len: u16 };
 
     pub fn init() SymbolTable {
         return .{
-            .chars = .{},
-            .spans = .{},
+            .names = .{},
             .lookup = .{},
         };
     }
 
     pub fn deinit(self: *SymbolTable, allocator: std.mem.Allocator) void {
-        self.chars.deinit(allocator);
-        self.spans.deinit(allocator);
+        for (self.names.items) |name| {
+            allocator.free(name);
+        }
+        self.names.deinit(allocator);
         self.lookup.deinit(allocator);
     }
 
@@ -27,23 +25,17 @@ pub const SymbolTable = struct {
         if (self.lookup.get(name)) |existing| {
             return existing;
         }
-        const idx: u24 = @intCast(self.spans.items.len);
-        const start: u32 = @intCast(self.chars.items.len);
-        try self.chars.appendSlice(allocator, name);
-        try self.spans.append(allocator, .{
-            .start = start,
-            .len = @intCast(name.len),
-        });
-        // The key for lookup must point into our own chars buffer
-        const key = self.chars.items[start .. start + name.len];
-        try self.lookup.put(allocator, key, idx);
+        const idx: u24 = @intCast(self.names.items.len);
+        const owned = try allocator.dupe(u8, name);
+        errdefer allocator.free(owned);
+        try self.names.append(allocator, owned);
+        try self.lookup.put(allocator, owned, idx);
         return idx;
     }
 
     /// Get the string name for a symbol index.
     pub fn getName(self: SymbolTable, id: u24) []const u8 {
-        const span = self.spans.items[id];
-        return self.chars.items[span.start .. span.start + span.len];
+        return self.names.items[id];
     }
 };
 
