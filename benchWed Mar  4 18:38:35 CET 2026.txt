@@ -1,0 +1,42 @@
+Building llisp...
+
+
+[1mFIXTURE                        GC             REAL (s)   USER (s)    SYS (s)     PEAK MEM[0m
+----------------------------------------------------------------------------------------
+accumulator.schm               none               0.39       0.39       0.39       2.3 MB
+begin.schm                     none               0.00       0.00       0.00       2.2 MB
+closures.schm                  none               0.00       0.00       0.00       2.3 MB
+conditionals.schm              none               0.00       0.00       0.00       2.3 MB
+factorial.schm                 none               0.00       0.00       0.00       2.3 MB
+fibonacci.schm                 none               0.00       0.00       0.00       2.4 MB
+fold.schm                      none               0.00       0.00       0.00       2.4 MB
+gc_stress_heavy.schm           none               3.19       3.19       3.19     343.0 MB
+gc_stress.schm                 none               0.03       0.03       0.03       5.3 MB
+higher_order.schm              none               0.01       0.01       0.01       2.3 MB
+list_ops.schm                  none               0.00       0.00       0.00       2.3 MB
+lists.schm                     none               0.00       0.00       0.00       2.3 MB
+mutation.schm                  none               0.00       0.00       0.00       2.2 MB
+mutual_recursion.schm          none               0.00       0.00       0.00       2.3 MB
+nested_closures.schm           none               0.00       0.00       0.00       2.3 MB
+reverse.schm                   none               0.00       0.00       0.00       2.3 MB
+strings.schm                   none               0.00       0.00       0.00       2.2 MB
+arithmetic.scm                 none               0.00       0.00       0.00       2.2 MB
+accumulator.schm               mark-sweep         0.00       0.00       0.00       2.3 MB
+begin.schm                     mark-sweep         0.00       0.00       0.00       2.2 MB
+closures.schm                  mark-sweep         0.00       0.00       0.00       2.3 MB
+conditionals.schm              mark-sweep         0.00       0.00       0.00       2.2 MB
+factorial.schm                 mark-sweep         0.00       0.00       0.00       2.4 MB
+fibonacci.schm                 mark-sweep         0.00       0.00       0.00       2.4 MB
+fold.schm                      mark-sweep         0.00       0.00       0.00       2.4 MB
+gc_stress_heavy.schm           mark-sweep        27.46      27.46      27.46     181.1 MB
+gc_stress.schm                 mark-sweep         0.21       0.21       0.21       5.3 MB
+higher_order.schm              mark-sweep         0.01       0.01       0.01       2.4 MB
+list_ops.schm                  mark-sweep         0.00       0.00       0.00       2.3 MB
+lists.schm                     mark-sweep         0.00       0.00       0.00       2.3 MB
+mutation.schm                  mark-sweep         0.00       0.00       0.00       2.3 MB
+mutual_recursion.schm          mark-sweep         0.00       0.00       0.00       2.4 MB
+nested_closures.schm           mark-sweep         0.00       0.00       0.00       2.3 MB
+reverse.schm                   mark-sweep         0.00       0.00       0.00       2.3 MB
+strings.schm                   mark-sweep         0.00       0.00       0.00       2.3 MB
+arithmetic.scm                 mark-sweep         0.00       0.00       0.00       2.3 MB
+

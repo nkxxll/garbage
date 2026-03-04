@@ -43,7 +43,7 @@ fi
 
 mkdir -p "$SNAPSHOTS"
 
-GC_BACKENDS=("none" "mark-sweep")
+GC_BACKENDS=("none" "mark-sweep" "memory-pool")
 
 # --- Benchmark mode ---
 if [[ "$MODE" == "bench" ]]; then
