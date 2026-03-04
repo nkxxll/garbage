@@ -555,7 +555,7 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
     };
 }
 
-pub const Interpreter = InterpreterFor(gc_mod.GcAllocator);
+const Interpreter = InterpreterFor(gc_mod.GcAllocator);
 
 // --- Tests ---
 

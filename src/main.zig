@@ -4,11 +4,16 @@ const llisp = @import("llisp");
 const GcBackend = enum {
     none,
     mark_sweep,
+    memory_pool,
 };
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    defer {
+        if (.leak == gpa.deinit()) {
+            @panic("memory leak");
+        }
+    }
     const allocator = gpa.allocator();
 
     const args = try std.process.argsAlloc(allocator);
@@ -22,6 +27,8 @@ pub fn main() !void {
             gc_backend = .none;
         } else if (std.mem.eql(u8, arg, "--gc=mark-sweep")) {
             gc_backend = .mark_sweep;
+        } else if (std.mem.eql(u8, arg, "--gc=memory-pool")) {
+            gc_backend = .memory_pool;
         } else if (std.mem.startsWith(u8, arg, "--gc=")) {
             std.debug.print("Unknown GC backend: {s}\n", .{arg[5..]});
             std.debug.print("Available: none, mark-sweep\n", .{});
@@ -50,29 +57,46 @@ pub fn main() !void {
 
     switch (gc_backend) {
         .none => {
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.Value);
+            const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
             var nogc = llisp.gc.NoGc.init(allocator);
             defer nogc.deinit();
 
-            var interp = try llisp.interpreter.Interpreter.init(nogc.gcAllocator(), &p.ast, allocator);
+            var interp = try Interpreter.init(nogc.gcAllocator(), &p.ast, allocator);
             defer interp.deinit();
 
-            try runInterpreter(&interp, &p.ast);
+            try runInterpreter(Interpreter, &interp, &p.ast);
         },
         .mark_sweep => {
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.Value);
+            const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
             var ms = llisp.gc.MarkAndSweepGPABacked.init(allocator);
             defer ms.deinit();
 
-            var interp = try llisp.interpreter.Interpreter.init(ms.gcAllocator(), &p.ast, allocator);
+            var interp = try Interpreter.init(ms.gcAllocator(), &p.ast, allocator);
             defer interp.deinit();
 
             ms.bindInterpreter(&interp.globals);
 
-            try runInterpreter(&interp, &p.ast);
+            try runInterpreter(Interpreter, &interp, &p.ast);
         },
+        .memory_pool => {
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.Value);
+            const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
+            var ms = llisp.gc.MarkAndSweepMemoryPool.init(allocator);
+            defer ms.deinit();
+
+            var interp = try Interpreter.init(ms.gcAllocator(), &p.ast, allocator);
+            defer interp.deinit();
+
+            ms.bindInterpreter(&interp.globals);
+
+            try runInterpreter(Interpreter, &interp, &p.ast);
+        }
     }
 }
 
-fn runInterpreter(interp: *llisp.interpreter.Interpreter, ast: *const llisp.parser.Ast) !void {
+fn runInterpreter(comptime InterpreterType: type, interp: *InterpreterType, ast: *const llisp.parser.Ast) !void {
     const root_node = ast.nodes.items[ast.root];
     const root_items = ast.listSlice(root_node.data.list);
 
