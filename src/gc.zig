@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const val = @import("value.zig");
-const Value = val.Value;
+const Value = val.ValueDataIndex;
 const ValueTag = val.ValueTag;
 const ConsCell = val.ConsCell;
 const Closure = val.Closure;
@@ -15,10 +15,12 @@ pub const GcAllocatorFor = @import("gc/gc_interface.zig").GcAllocatorFor;
 pub const NoGc = @import("gc/nogc.zig");
 pub const MarkAndSweepMemoryPool = @import("gc/memory_pool.zig");
 pub const MarkAndSweepGPABacked = @import("gc/gpa_backed.zig");
+pub const CopyingGC = @import("gc/copying.zig");
+
+pub const GcAllocator = GcAllocatorFor(Value);
 
 // --- Tests ---
 const Scope = ScopeFor(Value);
-const GcAllocator = GcAllocatorFor(Value);
 
 test "NoGc: number round-trip" {
     var nogc = NoGc.init(std.testing.allocator);

@@ -1,46 +1,52 @@
 const std = @import("std");
 
-pub const Value = struct {
+const NumberType = f64;
+
+pub fn dataPtrAsNumber(data: *anyopaque) NumberType {
+    return @as(*f64, @ptrCast(@alignCast(data))).*;
+}
+
+pub const ValueDataIndex = struct {
     tag: ValueTag,
     data: usize,
 
-    pub const nil_value = Value{ .tag = .nil, .data = 0 };
-    pub const true_value = Value{ .tag = .boolean, .data = 1 };
-    pub const false_value = Value{ .tag = .boolean, .data = 0 };
+    pub const nil_value = ValueDataIndex{ .tag = .nil, .data = 0 };
+    pub const true_value = ValueDataIndex{ .tag = .boolean, .data = 1 };
+    pub const false_value = ValueDataIndex{ .tag = .boolean, .data = 0 };
 
-    pub fn init(tag: ValueTag, data: usize) Value {
+    pub fn init(tag: ValueTag, data: usize) ValueDataIndex {
         return .{
             .tag = tag,
             .data = data,
         };
     }
 
-    pub fn eql(a: Value, b: Value) bool {
+    pub fn eql(a: ValueDataIndex, b: ValueDataIndex) bool {
         return a.tag == b.tag and a.data == b.data;
     }
 
     /// Return the data field as an index (for index-based GC backends).
-    pub fn get_index(self: Value) usize {
+    pub fn get_index(self: ValueDataIndex) usize {
         return self.data;
     }
 
     /// Set the data field from an index (for index-based GC backends).
-    pub fn set_index(self: *Value, idx: usize) void {
+    pub fn set_index(self: *ValueDataIndex, idx: usize) void {
         self.data = idx;
     }
 
     /// Construct a Value from a tag and index.
-    pub fn from_index(tag: ValueTag, idx: usize) Value {
+    pub fn from_index(tag: ValueTag, idx: usize) ValueDataIndex {
         return .{ .tag = tag, .data = idx };
     }
 
     /// Interpret the data field as a pointer (for pointer-based GC backends).
-    pub fn get_ptr(self: Value, comptime T: type) *T {
+    pub fn get_ptr(self: ValueDataIndex, comptime T: type) *T {
         return @ptrFromInt(self.data);
     }
 
     /// Construct a Value from a tag and pointer.
-    pub fn from_ptr(tag: ValueTag, ptr: anytype) Value {
+    pub fn from_ptr(tag: ValueTag, ptr: anytype) ValueDataIndex {
         return .{ .tag = tag, .data = @intFromPtr(ptr) };
     }
 };
@@ -75,14 +81,14 @@ pub fn assertValueInterface(comptime V: type) void {
         @compileError("Value type must declare `true_value`");
     if (!@hasDecl(V, "false_value"))
         @compileError("Value type must declare `false_value`");
-    if (@sizeOf(V) != @sizeOf(Value))
+    if (@sizeOf(V) != @sizeOf(ValueDataIndex))
         @compileError("Value type must be the same size as the base Value");
 }
 
 // Sentinel constants (re-exported from Value for backward compatibility)
-pub const nil_value = Value.nil_value;
-pub const true_value = Value.true_value;
-pub const false_value = Value.false_value;
+pub const nil_value = ValueDataIndex.nil_value;
+pub const true_value = ValueDataIndex.true_value;
+pub const false_value = ValueDataIndex.false_value;
 
 // Pool data types — flat structs stored in parallel arrays
 
@@ -92,7 +98,7 @@ pub fn ConsCellFor(comptime V: type) type {
         cdr: V,
     };
 }
-pub const ConsCell = ConsCellFor(Value);
+pub const ConsCell = ConsCellFor(ValueDataIndex);
 
 pub fn ClosureFor(comptime V: type) type {
     return struct {
@@ -102,7 +108,7 @@ pub fn ClosureFor(comptime V: type) type {
         arity: u16,
     };
 }
-pub const Closure = ClosureFor(Value);
+pub const Closure = ClosureFor(ValueDataIndex);
 
 pub const VectorData = struct {
     start: u32, // index into shared Value buffer
@@ -117,7 +123,7 @@ pub const StringSpan = struct {
 // --- Tests ---
 
 test "Value can hold a pointer" {
-    try std.testing.expect(@sizeOf(Value) >= @sizeOf(usize) + 1);
+    try std.testing.expect(@sizeOf(ValueDataIndex) >= @sizeOf(usize) + 1);
 }
 
 test "sentinel values have expected bit patterns" {
@@ -137,9 +143,9 @@ test "Value.eql works" {
     try std.testing.expect(!nil_value.eql(true_value));
     try std.testing.expect(!true_value.eql(false_value));
 
-    const a = Value{ .tag = .cons, .data = 42 };
-    const b = Value{ .tag = .cons, .data = 42 };
-    const c = Value{ .tag = .cons, .data = 43 };
+    const a = ValueDataIndex{ .tag = .cons, .data = 42 };
+    const b = ValueDataIndex{ .tag = .cons, .data = 42 };
+    const c = ValueDataIndex{ .tag = .cons, .data = 43 };
     try std.testing.expect(a.eql(b));
     try std.testing.expect(!a.eql(c));
 }
@@ -158,21 +164,21 @@ test "Value tags are distinct" {
 }
 
 test "Value.from_index and get_index round-trip" {
-    const v = Value.from_index(.number, 42);
+    const v = ValueDataIndex.from_index(.number, 42);
     try std.testing.expectEqual(ValueTag.number, v.tag);
     try std.testing.expectEqual(@as(usize, 42), v.get_index());
 }
 
 test "Value.from_ptr and get_ptr round-trip" {
     var x: u64 = 123;
-    const v = Value.from_ptr(.number, &x);
+    const v = ValueDataIndex.from_ptr(.number, &x);
     try std.testing.expectEqual(ValueTag.number, v.tag);
     const ptr = v.get_ptr(u64);
     try std.testing.expectEqual(@as(u64, 123), ptr.*);
 }
 
 test "assertValueInterface accepts Value" {
-    comptime assertValueInterface(Value);
+    comptime assertValueInterface(ValueDataIndex);
 }
 
 test "assertValueInterface accepts a custom Value with same layout" {

@@ -40,6 +40,7 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
         sym_if: usize,
         sym_lambda: usize,
         sym_begin: usize,
+        sym_let: usize,
 
         pub fn init(gc: GcAlloc, ast: *const parser.Ast, backing: std.mem.Allocator) !Self {
             var self = Self{
@@ -56,6 +57,7 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
                 .sym_if = undefined,
                 .sym_lambda = undefined,
                 .sym_begin = undefined,
+                .sym_let = undefined,
             };
 
             self.sym_quote = try self.symbols.intern(backing, "quote");
@@ -64,6 +66,7 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
             self.sym_if = try self.symbols.intern(backing, "if");
             self.sym_lambda = try self.symbols.intern(backing, "lambda");
             self.sym_begin = try self.symbols.intern(backing, "begin");
+            self.sym_let = try self.symbols.intern(backing, "let");
 
             try self.registerBuiltin("+", builtinAdd);
             try self.registerBuiltin("-", builtinSub);
@@ -83,6 +86,8 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
             try self.registerBuiltin("not", builtinNot);
             try self.registerBuiltin("set-car!", builtinSetCar);
             try self.registerBuiltin("set-cdr!", builtinSetCdr);
+            try self.registerBuiltin("make-list", builtinMakeList);
+            try self.registerBuiltin("length", builtinLength);
 
             return self;
         }
@@ -239,6 +244,7 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
                         if (head_val.data == self.sym_if) return self.evalIf(args_list, scope);
                         if (head_val.data == self.sym_lambda) return self.evalLambda(args_list, scope);
                         if (head_val.data == self.sym_begin) return self.evalBegin(args_list, scope);
+                        if (head_val.data == self.sym_let) return self.evalLet(args_list, scope);
                     }
 
                     const func = try self.eval(head_val, scope);
@@ -337,6 +343,33 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
                 result = try self.eval(self.gc.getCar(current.data), scope);
                 current = self.gc.getCdr(current.data);
             }
+            return result;
+        }
+
+        fn evalLet(self: *Self, args: V, scope: ?usize) EvalError!V {
+            // (let ((var1 expr1) (var2 expr2) ...) body...)
+            const bindings = self.gc.getCar(args.data);
+            const body = self.gc.getCdr(args.data);
+
+            // Create a new scope for the let bindings
+            const scope_val = self.gc.alloc(ScopeT, .{ .table = .{}, .parent = scope, .alloc = self.backing });
+            const new_scope = scope_val.data;
+            self.gc.pushRoot(scope_val);
+
+            // Evaluate each binding and add to scope
+            var current = bindings;
+            while (current.tag == .cons) {
+                const binding = self.gc.getCar(current.data);
+                const sym = self.gc.getCar(binding.data);
+                const expr = self.gc.getCar(self.gc.getCdr(binding.data).data);
+                const result = try self.eval(expr, scope);
+                var sc = self.gc.getScope(new_scope);
+                try sc.table.put(self.backing, sym.data, result);
+                current = self.gc.getCdr(current.data);
+            }
+
+            const result = try self.evalBegin(body, new_scope);
+            self.gc.popRoot();
             return result;
         }
 
@@ -552,6 +585,28 @@ pub fn InterpreterFor(comptime GcAlloc: type) type {
             self.gc.setCdr(pair.data, new_val);
             return V.nil_value;
         }
+
+        fn builtinMakeList(self: *Self, args: V) EvalError!V {
+            const count_val, const fill = self.args2(args);
+            const count: usize = @intFromFloat(try self.getNum(count_val));
+            var result = V.nil_value;
+            for (0..count) |_| {
+                self.gc.pushRoot(result);
+                result = self.gc.alloc(ConsCellT, .{ .car = fill, .cdr = result });
+                self.gc.popRoot();
+            }
+            return result;
+        }
+
+        fn builtinLength(self: *Self, args: V) EvalError!V {
+            var list = self.gc.getCar(args.data);
+            var count: f64 = 0;
+            while (list.tag == .cons) {
+                count += 1;
+                list = self.gc.getCdr(list.data);
+            }
+            return self.gc.alloc(f64, count);
+        }
     };
 }
 
@@ -559,7 +614,7 @@ const Interpreter = InterpreterFor(gc_mod.GcAllocator);
 
 // --- Tests ---
 
-const Value = val.Value;
+const Value = val.ValueDataIndex;
 
 fn testEval(source: [:0]const u8) !struct { value: Value, number: f64, output: []const u8 } {
     const allocator = std.testing.allocator;

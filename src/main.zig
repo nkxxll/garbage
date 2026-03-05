@@ -5,6 +5,7 @@ const GcBackend = enum {
     none,
     mark_sweep,
     memory_pool,
+    copying,
 };
 
 pub fn main() !void {
@@ -29,6 +30,8 @@ pub fn main() !void {
             gc_backend = .mark_sweep;
         } else if (std.mem.eql(u8, arg, "--gc=memory-pool")) {
             gc_backend = .memory_pool;
+        } else if (std.mem.eql(u8, arg, "--gc=copying")) {
+            gc_backend = .copying;
         } else if (std.mem.startsWith(u8, arg, "--gc=")) {
             std.debug.print("Unknown GC backend: {s}\n", .{arg[5..]});
             std.debug.print("Available: none, mark-sweep\n", .{});
@@ -42,7 +45,7 @@ pub fn main() !void {
     }
 
     if (file_path == null) {
-        std.debug.print("Usage: llisp [--gc=none|mark-sweep] <file>\n", .{});
+        std.debug.print("Usage: llisp [--gc=none|mark-sweep|memory-pool|copying] <file>\n", .{});
         std.process.exit(1);
     }
 
@@ -57,7 +60,7 @@ pub fn main() !void {
 
     switch (gc_backend) {
         .none => {
-            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.Value);
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.ValueDataIndex);
             const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
             var nogc = llisp.gc.NoGc.init(allocator);
             defer nogc.deinit();
@@ -68,7 +71,7 @@ pub fn main() !void {
             try runInterpreter(Interpreter, &interp, &p.ast);
         },
         .mark_sweep => {
-            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.Value);
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.ValueDataIndex);
             const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
             var ms = llisp.gc.MarkAndSweepGPABacked.init(allocator);
             defer ms.deinit();
@@ -81,7 +84,7 @@ pub fn main() !void {
             try runInterpreter(Interpreter, &interp, &p.ast);
         },
         .memory_pool => {
-            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.Value);
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.ValueDataIndex);
             const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
             var ms = llisp.gc.MarkAndSweepMemoryPool.init(allocator);
             defer ms.deinit();
@@ -92,7 +95,21 @@ pub fn main() !void {
             ms.bindInterpreter(&interp.globals);
 
             try runInterpreter(Interpreter, &interp, &p.ast);
-        }
+        },
+        .copying => {
+            const GcAllocator = llisp.gc.GcAllocatorFor(llisp.value.ValueDataIndex);
+            const Interpreter = llisp.interpreter.InterpreterFor(GcAllocator);
+            const page_alloc = std.heap.page_allocator;
+            var copying = llisp.gc.CopyingGC.init(allocator, page_alloc);
+            defer copying.deinit();
+
+            var interp = try Interpreter.init(copying.gcAllocator(), &p.ast, allocator);
+            defer interp.deinit();
+
+            copying.bindInterpreter(&interp.globals);
+
+            try runInterpreter(Interpreter, &interp, &p.ast);
+        },
     }
 }
 
